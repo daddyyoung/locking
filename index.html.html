@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#EF9F27">
+<title>Locking · 14 天激活协议</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { font-size: 16px; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: #FAF7F2; color: #2B2620; line-height: 1.6;
+    max-width: 560px; margin: 0 auto; padding: 16px 14px 40px;
+  }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+  .brand { display: flex; align-items: baseline; gap: 8px; }
+  .brand h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: 0.5px; }
+  .brand .sub { font-size: 0.75rem; color: #8A7E6E; }
+  .sync-pill {
+    display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+    font-size: 0.72rem; color: #6B6154; background: #F1EBE1;
+    border-radius: 999px; padding: 4px 10px; white-space: nowrap;
+  }
+  .sync-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: #B9AE9D; }
+  .sync-pill.ok .dot { background: #3E9C5C; }
+  .sync-pill.err .dot { background: #D2503A; }
+  .sync-pill.busy .dot { background: #EF9F27; }
+
+  .card {
+    background: #FFFFFF; border: 1px solid #EDE5D8; border-radius: 14px;
+    padding: 18px 16px; margin-bottom: 14px;
+    box-shadow: 0 1px 3px rgba(60, 45, 20, 0.04);
+  }
+  .day-label { font-size: 0.75rem; color: #8A7E6E; font-weight: 500; letter-spacing: 1px; }
+  .today-title { font-size: 1.4rem; font-weight: 600; margin: 2px 0 4px; }
+  .today-music { font-size: 0.85rem; color: #6B6154; margin-bottom: 12px; }
+  .today-desc { font-size: 0.9rem; color: #4A4438; margin-bottom: 14px; }
+  .tag {
+    display: inline-block; font-size: 0.72rem; font-weight: 500; color: #9A6A12;
+    background: #FCF0DB; border-radius: 6px; padding: 2px 8px; margin-left: 8px; vertical-align: middle;
+  }
+  .tag-gray { color: #6B6154; background: #F1EBE1; }
+  .tag-green { color: #2C7A4B; background: #E4F3E9; }
+
+  form.punch { display: flex; flex-direction: column; gap: 12px; }
+  .field-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .field { flex: 1; min-width: 130px; }
+  .field label { display: block; font-size: 0.8rem; color: #6B6154; margin-bottom: 5px; }
+  .field input[type="number"] {
+    width: 100%; font-size: 16px; padding: 11px 12px; border: 1px solid #DCD2C2;
+    border-radius: 10px; background: #FDFCF9; color: #2B2620;
+  }
+  .field input[type="number"]:focus { outline: 2px solid #EF9F27; outline-offset: 1px; border-color: #EF9F27; }
+  .check-row { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; }
+  .check-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: #EF9F27; }
+  .field textarea {
+    width: 100%; font-size: 16px; padding: 11px 12px; border: 1px solid #DCD2C2;
+    border-radius: 10px; background: #FDFCF9; color: #2B2620; resize: vertical; min-height: 60px;
+    font-family: inherit;
+  }
+  .field textarea:focus { outline: 2px solid #EF9F27; outline-offset: 1px; border-color: #EF9F27; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 48px; padding: 12px 20px; font-size: 1rem; font-weight: 600;
+    border: none; border-radius: 12px; cursor: pointer; width: 100%;
+    background: #EF9F27; color: #FFFFFF; transition: opacity 0.15s;
+  }
+  .btn:active { opacity: 0.85; }
+  .btn[disabled] { background: #D8CFC0; cursor: not-allowed; }
+  .btn-done { background: #3E9C5C; }
+
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+  .cell {
+    aspect-ratio: 1 / 1; border-radius: 10px; background: #F4EFE6;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 0.8rem; color: #8A7E6E; border: 1px solid transparent; position: relative;
+  }
+  .cell .num { font-weight: 600; font-size: 0.85rem; }
+  .cell.done { background: #E4F3E9; color: #2C7A4B; border-color: #BFE3CC; }
+  .cell.today { border-color: #EF9F27; border-width: 2px; color: #2B2620; background: #FCF0DB; }
+  .cell.missed { background: #F9E9E5; color: #C05038; }
+  .cell.film::after {
+    content: ""; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px;
+    border-radius: 50%; background: #9A6A12;
+  }
+  .grid-legend { display: flex; gap: 14px; margin-top: 10px; font-size: 0.72rem; color: #8A7E6E; flex-wrap: wrap; }
+  .legend-item { display: inline-flex; align-items: center; gap: 5px; }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+  .stat {
+    background: #FFFFFF; border: 1px solid #EDE5D8; border-radius: 12px;
+    padding: 10px 6px; text-align: center;
+  }
+  .stat .v { font-size: 1.3rem; font-weight: 600; color: #2B2620; }
+  .stat .k { font-size: 0.7rem; color: #8A7E6E; }
+
+  .toolbar { display: flex; gap: 10px; margin-bottom: 14px; }
+  .btn-secondary {
+    flex: 1; min-height: 44px; padding: 10px 12px; font-size: 0.88rem; font-weight: 500;
+    background: #FFFFFF; color: #6B6154; border: 1px solid #DCD2C2;
+    border-radius: 10px; cursor: pointer;
+  }
+  .btn-secondary:active { background: #F4EFE6; }
+
+  .log-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: 10px 2px; border-bottom: 1px solid #F1EBE1; font-size: 0.85rem;
+  }
+  .log-item:last-child { border-bottom: none; }
+  .log-item .meta { color: #6B6154; }
+  .log-item .meta b { color: #2B2620; font-weight: 500; }
+  .log-item .film-mark { color: #9A6A12; }
+  .log-empty { color: #8A7E6E; font-size: 0.85rem; text-align: center; padding: 14px 0; }
+
+  details.rules { font-size: 0.85rem; color: #4A4438; }
+  details.rules summary {
+    cursor: pointer; font-weight: 600; color: #6B6154;
+    padding: 6px 0; outline: none; list-style: none;
+  }
+  details.rules summary::-webkit-details-marker { display: none; }
+  details.rules summary::before { content: "▸ "; color: #EF9F27; }
+  details.rules[open] summary::before { content: "▾ "; }
+  details.rules ol { padding-left: 20px; margin: 8px 0; }
+  details.rules li { margin-bottom: 6px; }
+  details.rules .rule-em { color: #C05038; font-weight: 500; }
+
+  footer { text-align: center; font-size: 0.72rem; color: #B9AE9D; margin-top: 20px; line-height: 1.8; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px);
+    background: #2B2620; color: #FFF7EC; font-size: 0.85rem; border-radius: 10px;
+    padding: 10px 18px; opacity: 0; pointer-events: none; transition: all 0.25s;
+    max-width: 86vw; z-index: 99; box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 380px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .today-title { font-size: 1.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>Locking · 14 天激活</h1>
+    <span class="sub">每日一个动作</span>
+  </div>
+  <span class="sync-pill" id="sync-pill"><span class="dot"></span><span id="sync-text">离线</span></span>
+</header>
+
+<section class="card" id="today-card" data-sp-bindable="database" data-sp-database-id="b7eONKQsUVH4yS2H0fpMOA">
+  <div class="day-label" id="day-label">DAY 1 / 14</div>
+  <div class="today-title" id="today-title">加载中…<span class="tag" id="today-tag" style="display:none">录像日</span></div>
+  <div class="today-music" id="today-music"></div>
+  <div class="today-desc" id="today-desc"></div>
+
+  <form class="punch" id="punch-form" autocomplete="off">
+    <div class="field-row">
+      <div class="field">
+        <label for="minutes">练习时长（分钟）</label>
+        <input type="number" id="minutes" name="minutes" min="1" max="180" step="1" value="15" inputmode="numeric">
+      </div>
+    </div>
+    <div class="check-row">
+      <input type="checkbox" id="video" name="video">
+      <label for="video">今天拍了录像（对着镜子或手机）</label>
+    </div>
+    <div class="field">
+      <label for="note">一句话笔记（可选：卡在哪、什么感觉）</label>
+      <textarea id="note" name="note" rows="2" placeholder="例：lock 之后手腕总忘了定住"></textarea>
+    </div>
+    <button type="submit" class="btn" id="btn-punch">完成今日练习</button>
+  </form>
+</section>
+
+<section class="card" data-sp-bindable="database" data-sp-database-id="b7eONKQsUVH4yS2H0fpMOA">
+  <div class="day-label" style="margin-bottom:10px">14 天进度</div>
+  <div class="grid" id="grid"></div>
+  <div class="grid-legend">
+    <span class="legend-item"><span class="legend-swatch" style="background:#E4F3E9"></span>已完成</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#FCF0DB;border:2px solid #EF9F27"></span>今天</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#F9E9E5"></span>错过</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#9A6A12;border-radius:50%"></span>录像日</span>
+  </div>
+</section>
+
+<div class="stats" id="stats" data-sp-bindable="database" data-sp-database-id="b7eONKQsUVH4yS2H0fpMOA">
+  <div class="stat"><div class="v" id="stat-days">0/14</div><div class="k">完成天数</div></div>
+  <div class="stat"><div class="v" id="stat-streak">0</div><div class="k">连续</div></div>
+  <div class="stat"><div class="v" id="stat-mins">0</div><div class="k">总分钟</div></div>
+  <div class="stat"><div class="v" id="stat-films">0/3</div><div class="k">录像</div></div>
+</div>
+
+<div class="toolbar">
+  <button type="button" class="btn-secondary" id="btn-export">导出备份</button>
+  <button type="button" class="btn-secondary" id="btn-import">导入备份</button>
+  <input type="file" id="file-import" accept="application/json" style="display:none">
+</div>
+
+<section class="card" data-sp-bindable="database" data-sp-database-id="b7eONKQsUVH4yS2H0fpMOA">
+  <div class="day-label" style="margin-bottom:6px">打卡日志</div>
+  <div id="log-list"></div>
+</section>
+
+<section class="card">
+  <details class="rules">
+    <summary>协议规则（对抗 Goodhart：只看三个数）</summary>
+    <ol>
+      <li>每天只练<b>当前阶梯的 1 个动作</b>，至少 10 分钟，不许多学。多学算作弊。</li>
+      <li>只统计三件事：<b>天数、分钟、录像</b>。不统计"学会了几个技巧"——那是表演指标。</li>
+      <li>漏了一天：<span class="rule-em">不补课、不自责</span>，第二天直接练当天阶梯。连续漏 3 天才退一级。</li>
+      <li>14 天后 ≥10 天即算激活成功，回来做复盘；不足 10 天，问题在排期而非工具，先调时段。</li>
+      <li>手机端建议"分享 → 添加到主屏幕"，每天点开一次。</li>
+    </ol>
+  </details>
+</section>
+
+<footer>
+  数据云端同步 · 断网也能打卡，联网后自动补传<br>
+  15 天后回到这里，看完成天数给结论
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var DATABASE_ID = "b7eONKQsUVH4yS2H0fpMOA";
+  var LS_PREFIX = "wb_locking14_";
+  var LS_START = LS_PREFIX + "start";
+  var LS_CACHE = LS_PREFIX + "form";
+  var LS_PENDING = LS_PREFIX + "pending";
+
+  var LADDER = [
+    { t: "Lock（锁定）", d: "全身上抬到一半骤停定住，胸往前顶，表情留一个'嘿'。locking 的一切从这一个停顿开始。", m: "James Brown – Give It Up or Turnit a Loose", film: true },
+    { t: "Point（指）", d: "手臂伸直指向一个方向，手腕绷直，指完要 lock。想象你在人群里指着朋友喊他名字。", m: "James Brown – Soul Power", film: false },
+    { t: "Wrist Roll（翻腕）", d: "手腕画立圆翻转，幅度要大到手肘跟着走。慢练 20 遍再上音乐。", m: "The Meters – Cissy Strut", film: false },
+    { t: "Punch（出拳）", d: "对侧手脚同出的拳击动作，出拳瞬间 lock。节奏打在重拍上。", m: "James Brown – Lickin Stick", film: false },
+    { t: "Scooby Doo", d: "抬膝+锁定的经典步伐，落地的瞬间定住。先拆成'抬-锁'两拍练。", m: "Jimmy Castor – It's Just Begun", film: false },
+    { t: "Skeeter Rabbit", d: "踢腿跳步组合，脚底下要脆。做不快没关系，先做对。", m: "James Brown – Super Bad", film: false },
+    { t: "复习 + 小串烧", d: "把前 6 天的动作按任意顺序串 2 分钟，不许停。今天必须录像。", m: "任选前 6 天任一首", film: true },
+    { t: "Which-A-Way", d: "重心左右切换的经典步，肩膀和腿要对齐。想'推人-被推回去'。", m: "Parliament – Give Up the Funk", film: false },
+    { t: "Stop and Go", d: "走两步急停锁定的戏剧动作。停的时候全身必须'死机'一拍。", m: "Cameo – Word Up", film: false },
+    { t: "Scoot（滑步）", d: "侧向滑步接 lock，滑的时候上身保持稳。", m: "Zapp – More Bounce to the Ounce", film: false },
+    { t: "Rock Steady", d: "下蹲起身带手部节奏的经典动作，注意下蹲时膝盖弹性。", m: "Kool & The Gang – Jungle Boogie", film: false },
+    { t: "Alpha（字母步）", d: "手脚交替摆出字母形状的系列，先做 A 和 B 两个就够。", m: "Earth, Wind & Fire – Shining Star", film: false },
+    { t: "Funky Guitar", d: "弹空气吉他 + 摇滚表情，越欠揍越好。角色感比标准度重要。", m: "Curtis Mayfield – Superfly", film: false },
+    { t: "综合 Freestyle", d: "整首曲子即兴串全部词汇，允许重复、允许丑，不许停满 2 分钟。今天必须录像。", m: "任选最熟的一首 funk", film: true }
+  ];
+
+  /* ---------- 日期工具 ---------- */
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function toDateKey(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function parseKey(k) {
+    var p = k.split("-");
+    return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+  }
+  function todayKey() { return toDateKey(new Date()); }
+  function diffDays(aKey, bKey) {
+    return Math.round((parseKey(bKey) - parseKey(aKey)) / 86400000);
+  }
+
+  /* ---------- localStorage 封装 ---------- */
+  function lsGet(k) {
+    try { return window.localStorage.getItem(k); } catch (e) { return null; }
+  }
+  function lsSet(k, v) {
+    try { window.localStorage.setItem(k, v); } catch (e) {}
+  }
+  function lsDel(k) {
+    try { window.localStorage.removeItem(k); } catch (e) {}
+  }
+
+  /* ---------- UI 小件 ---------- */
+  var toastTimer = null;
+  function toast(msg) {
+    var el = document.getElementById("toast");
+    el.textContent = msg;
+    el.className = "toast show";
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.className = "toast"; }, 2200);
+  }
+  function setSync(state, text) {
+    var pill = document.getElementById("sync-pill");
+    pill.className = "sync-pill" + (state ? " " + state : "");
+    document.getElementById("sync-text").textContent = text;
+  }
+
+  /* ---------- 值解包：兼容 oneof 与裸值两种返回形态 ---------- */
+  function unwrap(v) {
+    if (v === null || v === undefined) return null;
+    if (typeof v === "object") {
+      if (v.date !== undefined) return v.date;
+      if (v.number !== undefined) return v.number;
+      if (v.checkbox !== undefined) return v.checkbox;
+      if (v.text !== undefined) return v.text;
+      if (v.value !== undefined) return v.value;
+      return null;
+    }
+    return v;
+  }
+  function rowDate(r) { var v = unwrap(r["日期"]); return typeof v === "string" ? v : null; }
+  function rowStep(r) { var v = unwrap(r["阶梯"]); var n = typeof v === "number" ? v : parseInt(v, 10); return isNaN(n) ? 1 : n; }
+  function rowMins(r) { var v = unwrap(r["时长分钟"]); var n = typeof v === "number" ? v : parseFloat(v); return isNaN(n) ? 0 : n; }
+  function rowFilm(r) { return unwrap(r["录像"]) === true; }
+  function rowNote(r) { var v = unwrap(r["笔记"]); return typeof v === "string" ? v : ""; }
+
+  /* ---------- 状态计算 ---------- */
+  var st = null;
+
+  function computeState(rows) {
+    var today = todayKey();
+    var i, k, r;
+
+    var byDate = {};
+    for (i = 0; i < rows.length; i++) {
+      r = rows[i];
+      var dk = rowDate(r);
+      if (!dk) continue;
+      if (!byDate[dk] || rowMins(r) > byDate[dk].mins) {
+        byDate[dk] = { mins: rowMins(r), video: rowFilm(r), note: rowNote(r), step: rowStep(r) };
+      }
+    }
+
+    var startKey = lsGet(LS_START);
+    var keys = [];
+    for (k in byDate) { if (byDate.hasOwnProperty(k)) keys.push(k); }
+    keys.sort();
+    if (keys.length && (!startKey || keys[0] < startKey)) startKey = keys[0];
+    if (!startKey) { startKey = today; lsSet(LS_START, startKey); }
+
+    var dayIndex = diffDays(startKey, today) + 1;
+    if (dayIndex < 1) dayIndex = 1;
+
+    var doneToday = !!byDate[today];
+    var yesterdayKey = toDateKey(new Date(parseKey(today).getTime() - 86400000));
+    var doneYesterday = !!byDate[yesterdayKey];
+
+    var tailMissed = 0;
+    var probe = parseKey(yesterdayKey).getTime();
+    while (!byDate[toDateKey(new Date(probe))] && diffDays(startKey, toDateKey(new Date(probe))) >= 0) {
+      tailMissed++;
+      probe -= 86400000;
+    }
+
+    var demote = Math.floor(tailMissed / 3);
+    var currentStep = dayIndex - demote;
+    if (currentStep > 14) currentStep = 14;
+    if (currentStep < 1) currentStep = 1;
+
+    var winCount = 0, totalMins = 0, filmCount = 0;
+    for (i = 0; i < 14; i++) {
+      var dk2 = toDateKey(new Date(parseKey(startKey).getTime() + i * 86400000));
+      var rec = byDate[dk2];
+      if (rec) { winCount++; totalMins += rec.mins; if (rec.video) filmCount++; }
+    }
+
+    var streak = 0;
+    var cursor = parseKey(today).getTime();
+    if (!byDate[today]) cursor -= 86400000;
+    while (byDate[toDateKey(new Date(cursor))]) { streak++; cursor -= 86400000; }
+
+    var verdict = null;
+    if (dayIndex >= 15) verdict = winCount >= 10 ? "win" : "fail";
+
+    return {
+      today: today, startKey: startKey, dayIndex: dayIndex,
+      currentStep: currentStep, doneToday: doneToday, doneYesterday: doneYesterday,
+      winCount: winCount, totalMins: totalMins, filmCount: filmCount,
+      streak: streak, verdict: verdict, byDate: byDate
+    };
+  }
+
+  /* ---------- 渲染 ---------- */
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function renderToday() {
+    var step = LADDER[st.currentStep - 1];
+    var label = document.getElementById("day-label");
+    var title = document.getElementById("today-title");
+    var tag = document.getElementById("today-tag");
+    var music = document.getElementById("today-music");
+    var desc = document.getElementById("today-desc");
+    var form = document.getElementById("punch-form");
+    var btn = document.getElementById("btn-punch");
+
+    label.textContent = "DAY " + st.dayIndex + " / 14（阶梯 " + st.currentStep + "）";
+
+    if (st.verdict === "win") {
+      title.firstChild.nodeValue = "激活成功：14 天里完成 " + st.winCount + " 天";
+      tag.className = "tag tag-green"; tag.style.display = ""; tag.textContent = "进入下一阶段";
+      music.textContent = "下一步：把「每天 10 分钟」延续下去，再谈进阶词汇。";
+      desc.textContent = "";
+    } else if (st.verdict === "fail") {
+      title.firstChild.nodeValue = "本轮完成 " + st.winCount + " / 14 天";
+      tag.className = "tag"; tag.style.display = ""; tag.textContent = "重新开始";
+      music.textContent = "问题多半不在坚持，在排期。先固定练习时段，再重开一轮。";
+      desc.textContent = "";
+    } else {
+      title.firstChild.nodeValue = step.t;
+      if (step.film) { tag.style.display = ""; tag.textContent = "录像日"; }
+      else { tag.style.display = "none"; }
+      music.textContent = "今日音乐：" + step.m;
+      desc.textContent = step.d;
+    }
+
+    if (st.doneToday) {
+      var rec = st.byDate[st.today];
+      btn.textContent = "今日已完成 · " + rec.mins + " 分钟" + (rec.video ? " · 已录像" : "");
+      btn.className = "btn btn-done";
+      btn.disabled = true;
+      form.querySelector(".field-row").style.display = "none";
+      document.getElementById("video").parentNode.style.display = "none";
+      document.getElementById("note").parentNode.style.display = "none";
+    } else {
+      btn.textContent = "完成今日练习";
+      btn.className = "btn";
+      btn.disabled = false;
+      form.querySelector(".field-row").style.display = "";
+      document.getElementById("video").parentNode.style.display = "";
+      document.getElementById("note").parentNode.style.display = "";
+    }
+  }
+
+  function renderGrid() {
+    var grid = document.getElementById("grid");
+    var html = "";
+    for (var i = 0; i < 14; i++) {
+      var dk = toDateKey(new Date(parseKey(st.startKey).getTime() + i * 86400000));
+      var cls = ["cell"];
+      if (st.byDate[dk]) cls.push("done");
+      if (i + 1 === st.dayIndex) cls.push("today");
+      if (!st.byDate[dk] && i + 1 < st.dayIndex) cls.push("missed");
+      if (LADDER[i].film) cls.push("film");
+      html += '<div class="' + cls.join(" ") + '" title="' + esc(LADDER[i].t) + '"><span class="num">' + (i + 1) + "</span></div>";
+    }
+    grid.innerHTML = html;
+  }
+
+  function renderStats() {
+    document.getElementById("stat-days").textContent = st.winCount + "/14";
+    document.getElementById("stat-streak").textContent = st.streak;
+    document.getElementById("stat-mins").textContent = st.totalMins;
+    document.getElementById("stat-films").textContent = st.filmCount + "/3";
+  }
+
+  function renderLog(rows) {
+    var list = document.getElementById("log-list");
+    var items = [];
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var dk = rowDate(r);
+      if (!dk) continue;
+      var stepIdx = rowStep(r);
+      var name = LADDER[Math.min(Math.max(stepIdx, 1), 14) - 1].t;
+      var film = rowFilm(r) ? ' <span class="film-mark">&#9679;录像</span>' : "";
+      var note = rowNote(r);
+      var noteHtml = note ? ' <span style="color:#8A7E6E">· ' + esc(note) + "</span>" : "";
+      items.push('<div class="log-item"><span class="meta"><b>' + esc(dk) + "</b> · " + esc(name) + film + noteHtml + '</span><span class="meta">' + rowMins(r) + " 分钟</span></div>");
+    }
+    if (!items.length) {
+      list.innerHTML = '<div class="log-empty">还没有打卡记录。今天就是第 1 天。</div>';
+    } else {
+      items.reverse();
+      if (items.length > 14) items = items.slice(0, 14);
+      list.innerHTML = items.join("");
+    }
+  }
+
+  function renderAll(rows) {
+    st = computeState(rows);
+    renderToday();
+    renderGrid();
+    renderStats();
+    renderLog(rows);
+  }
+
+  /* ---------- 表单缓存（DSDK008） ---------- */
+  var cacheTimer = null;
+  function saveFormCache() {
+    if (cacheTimer) clearTimeout(cacheTimer);
+    cacheTimer = setTimeout(function () {
+      lsSet(LS_CACHE, JSON.stringify({
+        minutes: document.getElementById("minutes").value,
+        video: document.getElementById("video").checked,
+        note: document.getElementById("note").value
+      }));
+    }, 300);
+  }
+  function restoreFormCache() {
+    var raw = lsGet(LS_CACHE);
+    if (!raw) return;
+    try {
+      var c = JSON.parse(raw);
+      if (c.minutes) document.getElementById("minutes").value = c.minutes;
+      if (c.video) document.getElementById("video").checked = true;
+      if (c.note) document.getElementById("note").value = c.note;
+    } catch (e) {}
+  }
+  function clearFormCache() {
+    lsDel(LS_CACHE);
+    document.getElementById("minutes").value = "15";
+    document.getElementById("video").checked = false;
+    document.getElementById("note").value = "";
+  }
+  function bindFormCache() {
+    var ids = ["minutes", "video", "note"];
+    for (var i = 0; i < ids.length; i++) {
+      var el = document.getElementById(ids[i]);
+      el.addEventListener("input", saveFormCache);
+      el.addEventListener("change", saveFormCache);
+    }
+  }
+
+  /* ---------- 离线补传队列 ---------- */
+  function getPending() {
+    var raw = lsGet(LS_PENDING);
+    if (!raw) return [];
+    try { return JSON.parse(raw) || []; } catch (e) { return []; }
+  }
+  function setPending(arr) {
+    if (arr.length) lsSet(LS_PENDING, JSON.stringify(arr));
+    else lsDel(LS_PENDING);
+  }
+  function queuePending(rec) {
+    var arr = getPending();
+    arr.push(rec);
+    setPending(arr);
+  }
+  function sdk() {
+    if (window.__SMART_PAGE__ && window.__SMART_PAGE__.database) return window.__SMART_PAGE__.database;
+    return null;
+  }
+  function flushPending() {
+    var db = sdk();
+    if (!db) return Promise.resolve(false);
+    var arr = getPending();
+    if (!arr.length) return Promise.resolve(true);
+    var rest = arr.slice();
+    function next() {
+      if (!rest.length) { setPending([]); return Promise.resolve(true); }
+      var rec = rest[0];
+      return db.addRecord({
+        databaseId: DATABASE_ID,
+        properties: {
+          "日期": { date: rec["日期"] },
+          "阶梯": { number: rec["阶梯"] },
+          "时长分钟": { number: rec["时长分钟"] },
+          "录像": { checkbox: !!rec["录像"] },
+          "笔记": { text: rec["笔记"] || "" }
+        }
+      }).then(function () {
+        rest.shift();
+        return next();
+      }).catch(function () {
+        setPending(rest);
+        return false;
+      });
+    }
+    return next();
+  }
+
+  /* ---------- 云端读取 ---------- */
+  var lastRows = [];
+
+  function queryAll() {
+    var db = sdk();
+    var all = [];
+    function page(cursor) {
+      return db.query({
+        databaseId: DATABASE_ID,
+        sorts: [{ property: "日期", direction: "asc" }],
+        fields: ["日期", "阶梯", "时长分钟", "录像", "笔记"],
+        cursor: cursor || undefined
+      }).then(function (res) {
+        all = all.concat(res.results || []);
+        if (res.hasMore && res.nextCursor) return page(res.nextCursor);
+        return all;
+      });
+    }
+    return page(null);
+  }
+
+  function loadData() {
+    var db = sdk();
+    if (!db) {
+      setSync("err", "离线模式");
+      lastRows = getPending();
+      renderAll(lastRows);
+      return;
+    }
+    setSync("busy", "同步中");
+    flushPending().then(function () {
+      return queryAll();
+    }).then(function (rows) {
+      lastRows = rows.concat(getPending());
+      renderAll(lastRows);
+      setSync("ok", "已同步");
+    }).catch(function () {
+      lastRows = getPending();
+      renderAll(lastRows);
+      setSync("err", "离线模式");
+    });
+  }
+
+  /* ---------- 打卡提交 ---------- */
+  function addRemote(rec) {
+    var db = sdk();
+    if (!db) return Promise.reject(new Error("offline"));
+    return db.addRecord({
+      databaseId: DATABASE_ID,
+      properties: {
+        "日期": { date: rec["日期"] },
+        "阶梯": { number: rec["阶梯"] },
+        "时长分钟": { number: rec["时长分钟"] },
+        "录像": { checkbox: !!rec["录像"] },
+        "笔记": { text: rec["笔记"] || "" }
+      }
+    });
+  }
+
+  function bindSubmit() {
+    var form = document.getElementById("punch-form");
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (!st || st.doneToday) return;
+      var mins = parseFloat(document.getElementById("minutes").value);
+      if (isNaN(mins) || mins <= 0) mins = 10;
+      var video = document.getElementById("video").checked;
+      var note = document.getElementById("note").value || "";
+      var rec = {
+        "日期": st.today,
+        "阶梯": st.currentStep,
+        "时长分钟": mins,
+        "录像": video,
+        "笔记": note
+      };
+      var finish = function () {
+        clearFormCache();
+        var kept = [];
+        for (var i = 0; i < lastRows.length; i++) {
+          if (rowDate(lastRows[i]) !== rec["日期"]) kept.push(lastRows[i]);
+        }
+        kept.unshift(rec);
+        lastRows = kept;
+        renderAll(lastRows);
+        toast(video ? "已打卡 · 录像记得存好" : "已打卡，明天见");
+      };
+      var db = sdk();
+      if (!db) {
+        queuePending(rec);
+        finish();
+        setSync("err", "离线待补传");
+        toast("已存本地，联网后自动补传");
+        return;
+      }
+      setSync("busy", "保存中");
+      addRemote(rec).then(function () {
+        finish();
+        setSync("ok", "已同步");
+      }).catch(function () {
+        queuePending(rec);
+        finish();
+        setSync("err", "离线待补传");
+        toast("已存本地，联网后自动补传");
+      });
+    });
+  }
+
+  /* ---------- 导出 / 导入备份 ---------- */
+  function bindBackup() {
+    document.getElementById("btn-export").addEventListener("click", function () {
+      var rows = [];
+      for (var i = 0; i < lastRows.length; i++) {
+        var r = lastRows[i];
+        rows.push({
+          "日期": rowDate(r), "阶梯": rowStep(r), "时长分钟": rowMins(r),
+          "录像": rowFilm(r), "笔记": rowNote(r)
+        });
+      }
+      var data = { app: "locking14", exportedAt: new Date().toISOString(), startKey: lsGet(LS_START), rows: rows };
+      var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "locking14-backup-" + todayKey() + ".json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      toast("备份已导出");
+    });
+
+    var fileInput = document.getElementById("file-import");
+    document.getElementById("btn-import").addEventListener("click", function () {
+      fileInput.click();
+    });
+    fileInput.addEventListener("change", function () {
+      var f = fileInput.files && fileInput.files[0];
+      if (!f) { return; }
+      var reader = new FileReader();
+      reader.onload = function () {
+        try {
+          var data = JSON.parse(reader.result);
+          if (!data || data.app !== "locking14" || !data.rows || !data.rows.length) throw new Error("bad format");
+          var exist = {};
+          for (var i = 0; i < lastRows.length; i++) exist[rowDate(lastRows[i])] = true;
+          var fresh = [];
+          for (var j = 0; j < data.rows.length; j++) {
+            var rr = data.rows[j];
+            if (rr && rr["日期"] && !exist[rr["日期"]]) fresh.push(rr);
+          }
+          if (data.startKey) lsSet(LS_START, data.startKey);
+          var db = sdk();
+          if (!db || !fresh.length) {
+            for (var k = 0; k < fresh.length; k++) queuePending(fresh[k]);
+            lastRows = lastRows.concat(fresh);
+            renderAll(lastRows);
+            if (!db) setSync("err", "离线待补传");
+            toast(fresh.length ? "已导入 " + fresh.length + " 条（待补传）" : "云端已有全部记录");
+            return;
+          }
+          setSync("busy", "导入中");
+          var rest = fresh.slice();
+          var step = function () {
+            if (!rest.length) { loadData(); toast("导入完成"); return; }
+            var rec = rest[0];
+            addRemote(rec).then(function () {
+              rest.shift();
+              step();
+            }).catch(function () {
+              for (var m = 0; m < rest.length; m++) queuePending(rest[m]);
+              loadData();
+              toast("部分导入，其余待补传");
+            });
+          };
+          step();
+        } catch (e) {
+          toast("文件格式不对");
+        }
+        fileInput.value = "";
+      };
+      reader.readAsText(f);
+    });
+  }
+
+  /* ---------- 启动 ---------- */
+  function init() {
+    restoreFormCache();
+    bindFormCache();
+    bindSubmit();
+    bindBackup();
+    var db = sdk();
+    if (!db) {
+      setSync("err", "离线模式");
+      lastRows = getPending();
+      renderAll(lastRows);
+      return;
+    }
+    setSync("busy", "连接中");
+    db.getSchema({ databaseId: DATABASE_ID }).then(function () {
+      loadData();
+    }).catch(function () {
+      setSync("err", "离线模式");
+      lastRows = getPending();
+      renderAll(lastRows);
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
